@@ -1,0 +1,108 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary-50: #f0fdf4;
+  --color-primary-100: #dcfce7;
+  --color-primary-200: #bbf7d0;
+  --color-primary-300: #86efac;
+  --color-primary-400: #4ade80;
+  --color-primary-500: #22c55e;
+  --color-primary-600: #16a34a;
+  --color-primary-700: #15803d;
+  --color-primary-800: #166534;
+  --color-primary-900: #14532d;
+
+  --color-accent-50: #f7fee7;
+  --color-accent-100: #ecfccb;
+  --color-accent-200: #d9f99d;
+  --color-accent-500: #84cc16;
+  --color-accent-600: #65a30d;
+
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-20px);
+  }
+
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@layer base {
+  body {
+    @apply bg-white text-slate-900 overflow-x-hidden;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: 'Manrope', sans-serif;
+    @apply tracking-tighter font-extrabold;
+  }
+}
+
+@layer components {
+  .mesh-bg {
+    background-color: #ffffff;
+    background-image:
+      radial-gradient(at 0% 0%, hsla(142, 70%, 98%, 1) 0, transparent 50%),
+      radial-gradient(at 50% 0%, hsla(142, 60%, 97%, 1) 0, transparent 50%),
+      radial-gradient(at 100% 0%, hsla(142, 70%, 96%, 1) 0, transparent 50%),
+      radial-gradient(at 0% 100%, hsla(142, 60%, 97%, 1) 0, transparent 50%),
+      radial-gradient(at 100% 100%, hsla(142, 70%, 97%, 1) 0, transparent 50%);
+  }
+
+  .glass {
+    @apply bg-white/60 backdrop-blur-2xl border border-slate-100 shadow-[0_20px_50px_rgba(0,0,0,0.03)];
+  }
+
+  .glass-card {
+    @apply bg-white backdrop-blur-xl border border-slate-50 shadow-[0_10px_40px_rgba(0,0,0,0.02)] hover:shadow-[0_25px_60px_rgba(22,163,74,0.08)] transition-all duration-700;
+  }
+
+  .btn-primary {
+    @apply relative overflow-hidden px-10 py-4 bg-slate-900 text-white rounded-[1.25rem] font-extrabold transition-all duration-500 hover:shadow-[0_25px_50px_-15px_rgba(0,0,0,0.3)] hover:-translate-y-1.5 active:scale-95 flex items-center justify-center gap-3 tracking-tight;
+  }
+
+  .btn-medical {
+    @apply px-10 py-5 bg-gradient-to-r from-primary-600 to-primary-500 text-white rounded-[1.5rem] font-black transition-all duration-500 hover:from-primary-500 hover:to-primary-400 shadow-[0_20px_40px_rgba(22,163,74,0.2)] hover:shadow-[0_25px_50px_rgba(22,163,74,0.3)] hover:-translate-y-2 flex items-center justify-center gap-3 active:scale-95 text-lg;
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-br from-slate-900 via-slate-800 to-slate-600;
+  }
+
+  .text-gradient-primary {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-600 via-primary-500 to-accent-500;
+  }
+
+  .nav-capsule {
+    @apply bg-white/60 backdrop-blur-2xl border rounded-full px-8 py-3 shadow-[0_15px_35px_rgba(0,0,0,0.02)] border-slate-100;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-primary-100 rounded-full border-[3px] border-white hover:bg-primary-200;
+}
