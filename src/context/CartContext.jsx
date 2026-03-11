@@ -9,7 +9,7 @@ export const CartProvider = ({ children }) => {
     const [prescriptionVerified, setPrescriptionVerified] = useState(false);
     const [serverCartReady, setServerCartReady] = useState(false);
     const { user } = useAuth();
-    const API_BASE = 'http://localhost:5000/api';
+    const API_BASE = `${import.meta.env.VITE_API_URL}/api`;
 
     useEffect(() => {
         const storedCart = localStorage.getItem('medshop_cart');

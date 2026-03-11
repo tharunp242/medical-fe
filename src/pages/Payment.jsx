@@ -89,7 +89,7 @@ const Payment = () => {
                 razorpaySignature: razorpayDetails?.razorpay_signature
             };
 
-            await axios.post('http://localhost:5000/api/orders', orderData);
+            await axios.post(`${import.meta.env.VITE_API_URL}/api/orders`, orderData);
             clearCart();
             toast.success('Order placed successfully');
             navigate('/');
@@ -116,7 +116,7 @@ const Payment = () => {
 
         try {
             // Create Razorpay order
-            const { data: order } = await axios.post('http://localhost:5000/api/razorpay/create-order', {
+            const { data: order } = await axios.post(`${import.meta.env.VITE_API_URL}/api/razorpay/create-order`, {
                 amount: totalINR,
                 currency: 'INR'
             });
@@ -131,7 +131,7 @@ const Payment = () => {
                 handler: async function (response) {
                     try {
                         // Verify payment
-                        await axios.post('http://localhost:5000/api/razorpay/verify-payment', {
+                        await axios.post(`${import.meta.env.VITE_API_URL}/api/razorpay/verify-payment`, {
                             razorpay_order_id: response.razorpay_order_id,
                             razorpay_payment_id: response.razorpay_payment_id,
                             razorpay_signature: response.razorpay_signature

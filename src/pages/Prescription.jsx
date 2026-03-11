@@ -33,7 +33,7 @@ const Prescription = () => {
                 data: { text: extractedText }
             } = await Tesseract.recognize(uploadedFile, 'eng');
 
-            const response = await axios.post('http://localhost:5000/api/analyze-prescription', {
+            const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/analyze-prescription`, {
                 text: extractedText || ''
             });
 

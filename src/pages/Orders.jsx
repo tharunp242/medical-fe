@@ -26,7 +26,7 @@ const Orders = () => {
         
         try {
             setLoading(true);
-            const response = await axios.get(`http://localhost:5000/api/orders?email=${user.email}`);
+            const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/orders?email=${user.email}`);
             setOrders(response.data);
         } catch (err) {
             console.error('Failed to fetch orders:', err);

@@ -60,9 +60,9 @@ const AdminDashboard = () => {
     const fetchData = async () => {
         try {
             const [ordersRes, productsRes, usersRes] = await Promise.all([
-                axios.get('http://localhost:5000/api/orders'),
-                axios.get('http://localhost:5000/api/products'),
-                axios.get('http://localhost:5000/api/users')
+                axios.get(`${import.meta.env.VITE_API_URL}/api/orders`),
+                axios.get(`${import.meta.env.VITE_API_URL}/api/products`),
+                axios.get(`${import.meta.env.VITE_API_URL}/api/users`)
             ]);
             setOrders(ordersRes.data || []);
             setProducts(productsRes.data || []);
@@ -80,7 +80,7 @@ const AdminDashboard = () => {
 
     const handleUpdateStock = async (id, stock) => {
         try {
-            await axios.patch(`http://localhost:5000/api/products/${id}/stock`, { stock });
+            await axios.patch(`${import.meta.env.VITE_API_URL}/api/products/${id}/stock`, { stock });
             toast.success('Inventory Synchronized');
             setLogs(prev => [{ id: Date.now(), action: "Stock Updated", node: "Product Sync", time: "Just now", type: "system" }, ...prev]);
             fetchData();
@@ -91,7 +91,7 @@ const AdminDashboard = () => {
 
     const handleUpdateStatus = async (id, status) => {
         try {
-            await axios.patch(`http://localhost:5000/api/orders/${id}/status`, { status });
+            await axios.patch(`${import.meta.env.VITE_API_URL}/api/orders/${id}/status`, { status });
             toast.success(`Order set to ${status}`);
             setLogs(prev => [{ id: Date.now(), action: `Status: ${status}`, node: `Order ${id.slice(-4)}`, time: "Just now", type: "order" }, ...prev]);
             fetchData();
@@ -104,7 +104,7 @@ const AdminDashboard = () => {
         try {
             // optimistic UI change
             setUsers(prev => prev.map(u => u._id === userId ? { ...u, role: makeAdmin ? 'admin' : 'user' } : u));
-            await axios.patch(`http://localhost:5000/api/users/${userId}/role`, { role: makeAdmin ? 'admin' : 'user' });
+            await axios.patch(`${import.meta.env.VITE_API_URL}/api/users/${userId}/role`, { role: makeAdmin ? 'admin' : 'user' });
             toast.success(`User role updated to ${makeAdmin ? 'admin' : 'user'}`);
             setLogs(prev => [{ id: Date.now(), action: `Role changed to ${makeAdmin ? 'admin' : 'user'}`, node: `USER-${userId.slice(-4)}`, time: 'Just now', type: 'system' }, ...prev]);
         } catch (err) {
@@ -116,7 +116,7 @@ const AdminDashboard = () => {
     const handleDeleteUser = async (userId) => {
         if (!confirm('Delete this user? This action cannot be undone.')) return;
         try {
-            await axios.delete(`http://localhost:5000/api/users/${userId}`);
+            await axios.delete(`${import.meta.env.VITE_API_URL}/api/users/${userId}`);
             setUsers(prev => prev.filter(u => u._id !== userId));
             toast.success('User deleted');
             setLogs(prev => [{ id: Date.now(), action: 'User deleted', node: `USER-${userId.slice(-4)}`, time: 'Just now', type: 'system' }, ...prev]);
@@ -128,7 +128,7 @@ const AdminDashboard = () => {
     const handleAddProduct = async (e) => {
         e.preventDefault();
         try {
-            await axios.post('http://localhost:5000/api/products', newProduct);
+            await axios.post(`${import.meta.env.VITE_API_URL}/api/products`, newProduct);
             toast.success('New Medical Node Materialized');
             setShowAddModal(false);
             setLogs(prev => [{ id: Date.now(), action: "Node Materialized", node: newProduct.name, time: "Just now", type: "system" }, ...prev]);
