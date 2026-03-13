@@ -55,7 +55,7 @@ const Navbar = () => {
                     </div>
                     <div className="flex flex-col">
                         <span className="text-2xl font-black tracking-[-0.08em] text-slate-900 group-hover:text-primary-600 transition-colors leading-none">
-                            Sri <span className="text-primary-500">Devi</span> Medicals
+                            Sri <span className="text-primary-500">Durga</span> Medicals
                         </span>
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] leading-none mt-1">Healthcare</span>
                     </div>

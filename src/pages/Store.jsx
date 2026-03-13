@@ -85,7 +85,7 @@ const Store = () => {
                         </h2>
                     </div>
                     <p className="text-slate-500 font-bold italic opacity-80">
-                        {selectedCategory === 'All Products' ? 'Explore all products in Sri Devi Medicals.' : `Viewing ${selectedCategory} products.`}
+                        {selectedCategory === 'All Products' ? 'Explore all products in Sri Durga Medicals.' : `Viewing ${selectedCategory} products.`}
                     </p>
                 </div>
                 <div className="flex gap-4 w-full md:w-auto">
