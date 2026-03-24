@@ -8,6 +8,23 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 import SEO from '../components/SEO';
 
+const SERVICEABLE_ERODE_AREAS = [
+    'erode',
+    'perundurai',
+    'bhavani',
+    'gobichettipalayam',
+    'sathyamangalam',
+    'anthiyur',
+    'chennimalai',
+    'modakurichi',
+    'kodumudi'
+];
+
+const isServiceableErodeAddress = (address = '') => {
+    const normalizedAddress = String(address).toLowerCase();
+    return SERVICEABLE_ERODE_AREAS.some((area) => normalizedAddress.includes(area));
+};
+
 const OrderSummary = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
@@ -30,8 +47,8 @@ const OrderSummary = () => {
     const [formData, setFormData] = useState({
         name: user?.name || '',
         email: user?.email || '',
-        phone: '',
-        address: ''
+        phone: user?.phone || '',
+        address: user?.address || ''
     });
 
     const [ordered, setOrdered] = useState(false);
@@ -41,6 +58,17 @@ const OrderSummary = () => {
             toast.error('Prescription verification required for some items');
             return;
         }
+
+        if (!formData.phone || !formData.address) {
+            toast.error('Please complete address and phone details');
+            return;
+        }
+
+        if (!isServiceableErodeAddress(formData.address)) {
+            toast.error('Delivery is available only in Erode district and surrounding areas');
+            return;
+        }
+
         try {
             const orderData = {
                 customerName: formData.name,
@@ -77,6 +105,11 @@ const OrderSummary = () => {
 
         if (!formData.phone || !formData.address) {
             toast.error('Please complete address and phone details');
+            return;
+        }
+
+        if (!isServiceableErodeAddress(formData.address)) {
+            toast.error('Delivery is available only in Erode district and surrounding areas');
             return;
         }
 
@@ -226,6 +259,10 @@ const OrderSummary = () => {
                         <div className="space-y-2">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">Precise Address</label>
                             <textarea value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} className="w-full px-6 py-4 bg-white/50 border border-white rounded-[1.5rem] focus:ring-4 focus:ring-primary-500/10 focus:outline-none transition-all font-bold" rows="3" placeholder="Apartment, Street, Landmark..." />
+                            <p className="text-xs font-bold text-slate-500">Delivery available only in Erode district and surrounding areas.</p>
+                            {!!formData.address && !isServiceableErodeAddress(formData.address) && (
+                                <p className="text-sm font-bold text-red-600">This address is outside our Erode delivery zone.</p>
+                            )}
                         </div>
                     </div>
                 </div>

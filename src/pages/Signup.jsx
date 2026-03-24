@@ -11,6 +11,7 @@ const Signup = () => {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [ageCategory, setAgeCategory] = useState('Adult');
     const { login } = useAuth();
     const navigate = useNavigate();
 
@@ -26,7 +27,8 @@ const Signup = () => {
             const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/register`, {
                 name,
                 email,
-                password
+                password,
+                ageCategory
             });
 
             login(response.data.user);
@@ -109,6 +111,19 @@ const Signup = () => {
                                     placeholder="••••••••"
                                 />
                             </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Age Category</label>
+                            <select
+                                value={ageCategory}
+                                onChange={(e) => setAgeCategory(e.target.value)}
+                                className="w-full px-6 py-5 bg-white/50 border border-white rounded-[1.5rem] focus:ring-4 focus:ring-primary-500/10 focus:outline-none transition-all font-bold"
+                            >
+                                <option value="Child">Child</option>
+                                <option value="Adult">Adult</option>
+                                <option value="Senior Citizen">Senior Citizen</option>
+                            </select>
                         </div>
 
                         <button

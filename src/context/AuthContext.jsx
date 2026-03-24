@@ -19,6 +19,14 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('medshop_user', JSON.stringify(userData));
     };
 
+    const updateUser = (partialUserData) => {
+        setUser((prev) => {
+            const updated = { ...(prev || {}), ...(partialUserData || {}) };
+            localStorage.setItem('medshop_user', JSON.stringify(updated));
+            return updated;
+        });
+    };
+
     const logout = () => {
         setUser(null);
         localStorage.removeItem('medshop_user');
@@ -29,7 +37,7 @@ export const AuthProvider = ({ children }) => {
 
 
     return (
-        <AuthContext.Provider value={{ user, login, logout, loading }}>
+        <AuthContext.Provider value={{ user, login, logout, updateUser, loading }}>
             {children}
         </AuthContext.Provider>
     );

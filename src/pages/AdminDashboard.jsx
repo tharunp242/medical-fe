@@ -24,7 +24,9 @@ import {
     AlertTriangle,
     ChevronDown,
     User,
-    LogOut
+    LogOut,
+    Pencil,
+    Trash2
 } from 'lucide-react';
 import axios from 'axios';
 import SEO from '../components/SEO';
@@ -32,14 +34,26 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 
 const AdminDashboard = () => {
-    const { user, logout } = useAuth();
+    const { user, logout, updateUser } = useAuth();
+    const LOW_STOCK_THRESHOLD = 10;
     const [orders, setOrders] = useState([]);
     const [products, setProducts] = useState([]);
     const [users, setUsers] = useState([]);
     const [activeTab, setActiveTab] = useState('orders');
     const [loading, setLoading] = useState(true);
     const [showAddModal, setShowAddModal] = useState(false);
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [showProfileModal, setShowProfileModal] = useState(false);
     const [showAdminMenu, setShowAdminMenu] = useState(false);
+    const [productSearch, setProductSearch] = useState('');
+    const [editingProduct, setEditingProduct] = useState(null);
+    const [profileData, setProfileData] = useState({
+        name: user?.name || '',
+        phone: user?.phone || '',
+        address: user?.address || '',
+        ageCategory: user?.ageCategory || 'Adult'
+    });
+    const [savingProfile, setSavingProfile] = useState(false);
 
     // Activity Logs State (Mock)
     const [logs, setLogs] = useState([
@@ -77,6 +91,17 @@ const AdminDashboard = () => {
     useEffect(() => {
         fetchData();
     }, []);
+
+    useEffect(() => {
+        if (user) {
+            setProfileData({
+                name: user.name || '',
+                phone: user.phone || '',
+                address: user.address || '',
+                ageCategory: user.ageCategory || 'Adult'
+            });
+        }
+    }, [user]);
 
     const handleUpdateStock = async (id, stock) => {
         try {
@@ -139,6 +164,74 @@ const AdminDashboard = () => {
         }
     };
 
+    const handleEditProduct = async (e) => {
+        e.preventDefault();
+        if (!editingProduct?._id) return;
+
+        try {
+            await axios.put(`${import.meta.env.VITE_API_URL}/api/products/${editingProduct._id}`, {
+                name: editingProduct.name,
+                category: editingProduct.category,
+                price: Number(editingProduct.price),
+                stock: Number(editingProduct.stock),
+                dosage: editingProduct.dosage,
+                requiresPrescription: Boolean(editingProduct.requiresPrescription)
+            });
+
+            toast.success('Product updated successfully');
+            setLogs(prev => [{ id: Date.now(), action: 'Product updated', node: editingProduct.name, time: 'Just now', type: 'system' }, ...prev]);
+            setShowEditModal(false);
+            setEditingProduct(null);
+            fetchData();
+        } catch (err) {
+            toast.error(err?.response?.data?.message || 'Failed to update product');
+        }
+    };
+
+    const handleDeleteProduct = async (productId, productName) => {
+        if (!confirm(`Delete ${productName}? This action cannot be undone.`)) return;
+
+        try {
+            await axios.delete(`${import.meta.env.VITE_API_URL}/api/products/${productId}`);
+            toast.success('Product deleted successfully');
+            setLogs(prev => [{ id: Date.now(), action: 'Product deleted', node: productName, time: 'Just now', type: 'system' }, ...prev]);
+            fetchData();
+        } catch (err) {
+            toast.error(err?.response?.data?.message || 'Failed to delete product');
+        }
+    };
+
+    const handleSaveProfile = async (e) => {
+        e.preventDefault();
+        if (!user?._id) {
+            toast.error('Please login again to update your profile');
+            return;
+        }
+
+        if (!profileData.name.trim()) {
+            toast.error('Name cannot be empty');
+            return;
+        }
+
+        try {
+            setSavingProfile(true);
+            const response = await axios.patch(`${import.meta.env.VITE_API_URL}/api/auth/users/${user._id}/profile`, {
+                name: profileData.name,
+                phone: profileData.phone,
+                address: profileData.address,
+                ageCategory: profileData.ageCategory
+            });
+
+            updateUser(response.data);
+            setShowProfileModal(false);
+            toast.success('Profile updated successfully');
+        } catch (err) {
+            toast.error(err?.response?.data?.message || 'Failed to update profile');
+        } finally {
+            setSavingProfile(false);
+        }
+    };
+
     const handleExport = () => {
         toast.promise(
             new Promise((resolve) => setTimeout(resolve, 2000)),
@@ -162,6 +255,18 @@ const AdminDashboard = () => {
 
     // Analytics state
     const [analyticsRange, setAnalyticsRange] = useState('day'); // 'day' | 'week' | 'month' | 'year'
+
+    const lowStockProducts = products.filter((p) => p.stock > 0 && p.stock <= LOW_STOCK_THRESHOLD);
+    const outOfStockProducts = products.filter((p) => p.stock === 0);
+    const filteredProducts = products.filter((p) => {
+        const term = productSearch.trim().toLowerCase();
+        if (!term) return true;
+        return (
+            String(p.name || '').toLowerCase().includes(term) ||
+            String(p.category || '').toLowerCase().includes(term) ||
+            String(p.dosage || '').toLowerCase().includes(term)
+        );
+    });
 
     const getBuckets = (range) => {
         const now = new Date();
@@ -265,12 +370,12 @@ const AdminDashboard = () => {
 
                                         <button
                                             onClick={() => {
-                                                toast.success(`Profile: ${user?.name || 'System Admin'}`);
+                                                setShowProfileModal(true);
                                                 setShowAdminMenu(false);
                                             }}
                                             className="w-full flex items-center gap-3 px-3 py-3 text-sm font-bold text-slate-700 hover:bg-primary-50 hover:text-primary-600 rounded-xl transition-all"
                                         >
-                                            <User className="w-4 h-4" /> Profile
+                                            <Pencil className="w-4 h-4" /> Edit Profile
                                         </button>
 
                                         <button
@@ -374,6 +479,67 @@ const AdminDashboard = () => {
 
                     {/* Main Interface */}
                     <div className="flex-1 space-y-10">
+                        {/* Global stock alerts shown immediately after login */}
+                        <div className="grid md:grid-cols-2 gap-6">
+                            <div className="glass p-6 rounded-[2rem] border border-amber-200/70 bg-amber-50/60">
+                                <div className="flex items-center justify-between gap-4 mb-4">
+                                    <div className="flex items-center gap-3">
+                                        <AlertTriangle className="w-5 h-5 text-amber-600" />
+                                        <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest">Low Stock</h4>
+                                    </div>
+                                    <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-black">
+                                        {lowStockProducts.length}
+                                    </span>
+                                </div>
+                                <div className="space-y-2 mb-4">
+                                    {lowStockProducts.slice(0, 5).map((p) => (
+                                        <div key={p._id} className="flex items-center justify-between text-sm font-bold text-slate-700">
+                                            <span className="truncate pr-4">{p.name}</span>
+                                            <span className="text-amber-700">{p.stock} left</span>
+                                        </div>
+                                    ))}
+                                    {lowStockProducts.length === 0 && (
+                                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">No low-stock products.</p>
+                                    )}
+                                </div>
+                                <button
+                                    onClick={() => setActiveTab('products')}
+                                    className="text-xs font-black uppercase tracking-widest text-amber-700 hover:text-amber-800"
+                                >
+                                    View in Product Management
+                                </button>
+                            </div>
+
+                            <div className="glass p-6 rounded-[2rem] border border-red-200/70 bg-red-50/60">
+                                <div className="flex items-center justify-between gap-4 mb-4">
+                                    <div className="flex items-center gap-3">
+                                        <Zap className="w-5 h-5 text-red-600" />
+                                        <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest">Out of Stock</h4>
+                                    </div>
+                                    <span className="px-3 py-1 rounded-full bg-red-100 text-red-700 text-xs font-black">
+                                        {outOfStockProducts.length}
+                                    </span>
+                                </div>
+                                <div className="space-y-2 mb-4">
+                                    {outOfStockProducts.slice(0, 5).map((p) => (
+                                        <div key={p._id} className="flex items-center justify-between text-sm font-bold text-slate-700">
+                                            <span className="truncate pr-4">{p.name}</span>
+                                            <span className="text-red-700">Out</span>
+                                        </div>
+                                    ))}
+                                    {outOfStockProducts.length === 0 && (
+                                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">No out-of-stock products.</p>
+                                    )}
+                                </div>
+                                <button
+                                    onClick={() => setActiveTab('products')}
+                                    className="text-xs font-black uppercase tracking-widest text-red-700 hover:text-red-800"
+                                >
+                                    Restock Products
+                                </button>
+                            </div>
+                        </div>
+
                         {/* Global Intelligence Stats - show only on Analytics tab */}
                         {activeTab === 'analytics' && (
                             <div className="grid md:grid-cols-3 gap-8">
@@ -492,6 +658,29 @@ const AdminDashboard = () => {
                                     exit={{ opacity: 0, x: -20 }}
                                     className="space-y-10"
                                 >
+                                    <div className="glass p-6 rounded-[2rem] border-white/60 flex flex-col md:flex-row items-stretch md:items-center gap-4 justify-between">
+                                        <div className="relative w-full md:max-w-md">
+                                            <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                                            <input
+                                                value={productSearch}
+                                                onChange={(e) => setProductSearch(e.target.value)}
+                                                placeholder="Search product by name, category, dosage..."
+                                                className="w-full pl-11 pr-4 py-3 rounded-2xl bg-white border border-slate-200 text-sm font-bold focus:outline-none focus:ring-4 focus:ring-primary-500/10"
+                                            />
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-xs font-black text-slate-500 uppercase tracking-widest">
+                                                {filteredProducts.length} of {products.length} products
+                                            </span>
+                                            <button
+                                                onClick={() => setShowAddModal(true)}
+                                                className="px-5 py-3 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-primary-600 transition-all"
+                                            >
+                                                + Add Product
+                                            </button>
+                                        </div>
+                                    </div>
+
                                     {/* Low Stock Alerts Node */}
                                     <div className="grid md:grid-cols-2 gap-8">
                                         {products.filter(p => p.stock < 15).map(lowP => (
@@ -516,7 +705,7 @@ const AdminDashboard = () => {
                                     </div>
 
                                     <div className="grid xl:grid-cols-2 gap-8">
-                                        {products.map((product) => (
+                                        {filteredProducts.map((product) => (
                                             <div key={product._id} className="glass p-8 rounded-[3.5rem] border-white/60 flex gap-8 items-center group hover:bg-white hover:shadow-2xl transition-all duration-500">
                                                 <div className="w-32 h-32 bg-slate-900/5 rounded-3xl flex items-center justify-center shrink-0 overflow-hidden border border-slate-100 relative">
                                                     <Package className="text-slate-300 w-12 h-12 group-hover:scale-125 transition-transform duration-700" />
@@ -550,9 +739,40 @@ const AdminDashboard = () => {
                                                             Update Stock
                                                         </button>
                                                     </div>
+                                                    <div className="flex gap-3 mt-3">
+                                                        <button
+                                                            onClick={() => {
+                                                                setEditingProduct({
+                                                                    _id: product._id,
+                                                                    name: product.name || '',
+                                                                    category: product.category || '',
+                                                                    price: product.price ?? 0,
+                                                                    stock: product.stock ?? 0,
+                                                                    dosage: product.dosage || '',
+                                                                    requiresPrescription: !!product.requiresPrescription
+                                                                });
+                                                                setShowEditModal(true);
+                                                            }}
+                                                            className="flex-1 py-3 bg-indigo-50 text-indigo-600 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-indigo-100 transition-all flex items-center justify-center gap-2"
+                                                        >
+                                                            <Pencil className="w-4 h-4" /> Edit
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteProduct(product._id, product.name)}
+                                                            className="flex-1 py-3 bg-red-50 text-red-600 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-red-100 transition-all flex items-center justify-center gap-2"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" /> Delete
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         ))}
+                                        {filteredProducts.length === 0 && (
+                                            <div className="xl:col-span-2 glass p-10 rounded-[2rem] border border-slate-200 text-center">
+                                                <p className="text-sm font-black text-slate-500 uppercase tracking-widest">No products found for this search.</p>
+                                            </div>
+                                        )}
+
                                         <button
                                             onClick={() => setShowAddModal(true)}
                                             className="border-4 border-dashed border-slate-200 rounded-[3.5rem] p-12 flex flex-col items-center justify-center gap-6 hover:border-primary-400 hover:bg-primary-50 transition-all text-slate-400 hover:text-primary-600 group"
@@ -774,6 +994,161 @@ const AdminDashboard = () => {
                                     </button>
                                 </form>
                             </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Edit Product Modal */}
+            <AnimatePresence>
+                {showEditModal && editingProduct && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-xl">
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            className="bg-white w-full max-w-2xl rounded-[4rem] overflow-hidden shadow-2xl relative"
+                        >
+                            <button onClick={() => { setShowEditModal(false); setEditingProduct(null); }} className="absolute top-8 right-8 p-3 hover:bg-slate-100 rounded-2xl transition-all">
+                                <X className="w-6 h-6 text-slate-400" />
+                            </button>
+
+                            <div className="p-12">
+                                <h3 className="text-4xl font-black text-slate-900 tracking-tighter mb-2">Edit <span className="text-primary-600">Product</span></h3>
+                                <p className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-10 italic">Update product details and inventory</p>
+
+                                <form onSubmit={handleEditProduct} className="space-y-6">
+                                    <div className="grid md:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Molecule Name</label>
+                                            <input required value={editingProduct.name} onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-[1.5rem] focus:ring-4 focus:ring-primary-500/10 font-bold" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Classification</label>
+                                            <input required value={editingProduct.category} onChange={(e) => setEditingProduct({ ...editingProduct, category: e.target.value })} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-[1.5rem] focus:ring-4 focus:ring-primary-500/10 font-bold" />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid md:grid-cols-3 gap-6">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Unit Price</label>
+                                            <input required type="number" value={editingProduct.price} onChange={(e) => setEditingProduct({ ...editingProduct, price: e.target.value })} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-[1.5rem] focus:ring-4 focus:ring-primary-500/10 font-bold" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Stock</label>
+                                            <input required type="number" value={editingProduct.stock} onChange={(e) => setEditingProduct({ ...editingProduct, stock: e.target.value })} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-[1.5rem] focus:ring-4 focus:ring-primary-500/10 font-bold" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Dosage Profile</label>
+                                            <input required value={editingProduct.dosage} onChange={(e) => setEditingProduct({ ...editingProduct, dosage: e.target.value })} className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-[1.5rem] focus:ring-4 focus:ring-primary-500/10 font-bold" />
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-4 p-6 bg-amber-50 rounded-[2rem] border border-amber-100">
+                                        <input
+                                            type="checkbox"
+                                            id="edit-rx"
+                                            className="w-6 h-6 accent-amber-500 cursor-pointer"
+                                            checked={editingProduct.requiresPrescription}
+                                            onChange={(e) => setEditingProduct({ ...editingProduct, requiresPrescription: e.target.checked })}
+                                        />
+                                        <label htmlFor="edit-rx" className="text-xs font-black text-amber-900 uppercase tracking-widest cursor-pointer">Restricted Substance (RX Required)</label>
+                                    </div>
+
+                                    <button
+                                        type="submit"
+                                        className="w-full py-6 mt-6 bg-slate-900 text-white rounded-[2rem] font-black text-sm uppercase tracking-[0.3em] hover:bg-primary-600 transition-all shadow-2xl"
+                                    >
+                                        Save Changes
+                                    </button>
+                                </form>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Edit Profile Modal */}
+            <AnimatePresence>
+                {showProfileModal && (
+                    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[200]">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="w-full max-w-md mx-4 bg-white rounded-[2.5rem] shadow-2xl p-8"
+                        >
+                            <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-2xl font-black text-slate-900">Edit Profile</h2>
+                                <button
+                                    onClick={() => setShowProfileModal(false)}
+                                    className="p-2 hover:bg-slate-100 rounded-full transition-all"
+                                >
+                                    <X className="w-5 h-5 text-slate-500" />
+                                </button>
+                            </div>
+
+                            <form
+                                onSubmit={(e) => {
+                                    e.preventDefault();
+                                    handleSaveProfile();
+                                }}
+                                className="space-y-4"
+                            >
+                                <div>
+                                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Full Name</label>
+                                    <input
+                                        type="text"
+                                        value={profileData.name}
+                                        onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+                                        className="w-full mt-2 px-6 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-primary-500/10 font-bold text-sm"
+                                        placeholder="Your full name"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Phone</label>
+                                    <input
+                                        type="tel"
+                                        value={profileData.phone}
+                                        onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                                        className="w-full mt-2 px-6 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-primary-500/10 font-bold text-sm"
+                                        placeholder="Your phone number"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Address</label>
+                                    <input
+                                        type="text"
+                                        value={profileData.address}
+                                        onChange={(e) => setProfileData({ ...profileData, address: e.target.value })}
+                                        className="w-full mt-2 px-6 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-primary-500/10 font-bold text-sm"
+                                        placeholder="Your address"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Age Category</label>
+                                    <select
+                                        value={profileData.ageCategory}
+                                        onChange={(e) => setProfileData({ ...profileData, ageCategory: e.target.value })}
+                                        className="w-full mt-2 px-6 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-primary-500/10 font-bold text-sm"
+                                    >
+                                        <option value="Child">Child</option>
+                                        <option value="Adult">Adult</option>
+                                        <option value="Senior Citizen">Senior Citizen</option>
+                                    </select>
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    disabled={savingProfile}
+                                    className="w-full mt-6 py-4 bg-slate-900 text-white font-bold rounded-xl hover:bg-primary-600 transition-all disabled:opacity-50"
+                                >
+                                    {savingProfile ? 'Saving...' : 'Save Changes'}
+                                </button>
+                            </form>
                         </motion.div>
                     </div>
                 )}

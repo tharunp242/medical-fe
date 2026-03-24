@@ -48,6 +48,11 @@ const Store = () => {
     });
 
     const handleAddToCart = (product) => {
+        if ((product.stock ?? 0) <= 0) {
+            toast.error('This product is currently out of stock');
+            return;
+        }
+
         if (!user) {
             toast.error('Please login to order products');
             navigate('/login');
@@ -162,11 +167,32 @@ const Store = () => {
                                         </div>
                                     )}
 
+                                    <div className="mb-6">
+                                        {(product.stock ?? 0) <= 0 ? (
+                                            <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-100 text-red-700 text-[10px] font-black uppercase tracking-widest">
+                                                Out of Stock
+                                            </span>
+                                        ) : (product.stock ?? 0) <= 10 ? (
+                                            <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-black uppercase tracking-widest">
+                                                Low Stock: {product.stock} left
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase tracking-widest">
+                                                In Stock: {product.stock}
+                                            </span>
+                                        )}
+                                    </div>
+
                                     <button
                                         onClick={() => handleAddToCart(product)}
-                                        className="w-full py-5 bg-slate-900 text-white rounded-[1.5rem] font-black tracking-[0.1em] text-[11px] uppercase shadow-2xl hover:bg-primary-600 hover:shadow-primary-500/40 transition-all flex items-center justify-center gap-3 group/btn"
+                                        disabled={(product.stock ?? 0) <= 0}
+                                        className={`w-full py-5 rounded-[1.5rem] font-black tracking-[0.1em] text-[11px] uppercase shadow-2xl transition-all flex items-center justify-center gap-3 group/btn ${(product.stock ?? 0) <= 0
+                                            ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
+                                            : 'bg-slate-900 text-white hover:bg-primary-600 hover:shadow-primary-500/40'
+                                            }`}
                                     >
-                                        Authorize Purchase <Plus className="w-5 h-5 group-hover/btn:rotate-90 transition-transform" />
+                                        {(product.stock ?? 0) <= 0 ? 'Unavailable' : 'Add to Cart'}
+                                        <Plus className="w-5 h-5 group-hover/btn:rotate-90 transition-transform" />
                                     </button>
                                 </div>
                             </motion.div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingCart, User, Menu, X, Pill, LogOut, ChevronDown, ShoppingBag, Package } from 'lucide-react';
+import { ShoppingCart, User, Menu, X, Pill, LogOut, ChevronDown, ShoppingBag, Package, Pencil } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 
@@ -9,9 +9,12 @@ const Navbar = () => {
     const [isScrolled, setIsScrolled] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const [showProfileModal, setShowProfileModal] = useState(false);
+    const [profileData, setProfileData] = useState({ name: '', phone: '', address: '', ageCategory: 'Adult' });
+    const [savingProfile, setSavingProfile] = useState(false);
     const { cartCount } = useCart();
     const location = useLocation();
-    const { user, logout } = useAuth();
+    const { user, logout, updateUser } = useAuth();
 
     useEffect(() => {
         const handleScroll = () => {
@@ -20,6 +23,48 @@ const Navbar = () => {
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
+
+    useEffect(() => {
+        if (user) {
+            setProfileData({
+                name: user.name || '',
+                phone: user.phone || '',
+                address: user.address || '',
+                ageCategory: user.ageCategory || 'Adult'
+            });
+        }
+    }, [user]);
+
+    const handleSaveProfile = async () => {
+        if (!profileData.name || !profileData.phone || !profileData.address) {
+            alert('Please fill all fields');
+            return;
+        }
+        setSavingProfile(true);
+        try {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/users/${user._id}/profile`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    name: profileData.name,
+                    phone: profileData.phone,
+                    address: profileData.address,
+                    ageCategory: profileData.ageCategory
+                })
+            });
+            if (response.ok) {
+                const updated = await response.json();
+                updateUser(updated);
+                setShowProfileModal(false);
+                setIsProfileOpen(false);
+            }
+        } catch (error) {
+            alert('Failed to update profile');
+        } finally {
+            setSavingProfile(false);
+        }
+    };
 
     const navLinks = [
         { name: 'Home', path: '/' },
@@ -159,6 +204,15 @@ const Navbar = () => {
                                             </Link>
                                         )}
                                         <button
+                                            onClick={() => {
+                                                setShowProfileModal(true);
+                                                setIsProfileOpen(false);
+                                            }}
+                                            className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-600 hover:bg-primary-50 hover:text-primary-600 rounded-2xl transition-all"
+                                        >
+                                            <Pencil className="w-4 h-4" /> Edit Profile
+                                        </button>
+                                        <button
                                             onClick={() => { logout(); setIsProfileOpen(false); }}
                                             className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-red-500 hover:bg-red-50 rounded-2xl transition-all"
                                         >
@@ -201,6 +255,92 @@ const Navbar = () => {
                             </Link>
                         ))}
                     </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Edit Profile Modal */}
+            <AnimatePresence>
+                {showProfileModal && (
+                    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[200]">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="w-full max-w-md mx-4 bg-white rounded-[2.5rem] shadow-2xl p-8"
+                        >
+                            <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-2xl font-black text-slate-900">Edit Profile</h2>
+                                <button
+                                    onClick={() => setShowProfileModal(false)}
+                                    className="p-2 hover:bg-slate-100 rounded-full transition-all"
+                                >
+                                    <X className="w-5 h-5 text-slate-500" />
+                                </button>
+                            </div>
+
+                            <form
+                                onSubmit={(e) => {
+                                    e.preventDefault();
+                                    handleSaveProfile();
+                                }}
+                                className="space-y-4"
+                            >
+                                <div>
+                                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Full Name</label>
+                                    <input
+                                        type="text"
+                                        value={profileData.name}
+                                        onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+                                        className="w-full mt-2 px-6 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-primary-500/10 font-bold text-sm"
+                                        placeholder="Your full name"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Phone</label>
+                                    <input
+                                        type="tel"
+                                        value={profileData.phone}
+                                        onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                                        className="w-full mt-2 px-6 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-primary-500/10 font-bold text-sm"
+                                        placeholder="Your phone number"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Address</label>
+                                    <input
+                                        type="text"
+                                        value={profileData.address}
+                                        onChange={(e) => setProfileData({ ...profileData, address: e.target.value })}
+                                        className="w-full mt-2 px-6 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-primary-500/10 font-bold text-sm"
+                                        placeholder="Your address"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Age Category</label>
+                                    <select
+                                        value={profileData.ageCategory}
+                                        onChange={(e) => setProfileData({ ...profileData, ageCategory: e.target.value })}
+                                        className="w-full mt-2 px-6 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-primary-500/10 font-bold text-sm"
+                                    >
+                                        <option value="Child">Child</option>
+                                        <option value="Adult">Adult</option>
+                                        <option value="Senior Citizen">Senior Citizen</option>
+                                    </select>
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    disabled={savingProfile}
+                                    className="w-full mt-6 py-4 bg-slate-900 text-white font-bold rounded-xl hover:bg-primary-600 transition-all disabled:opacity-50"
+                                >
+                                    {savingProfile ? 'Saving...' : 'Save Changes'}
+                                </button>
+                            </form>
+                        </motion.div>
+                    </div>
                 )}
             </AnimatePresence>
         </nav>

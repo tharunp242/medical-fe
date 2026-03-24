@@ -7,6 +7,23 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import SEO from '../components/SEO';
 
+const SERVICEABLE_ERODE_AREAS = [
+    'erode',
+    'perundurai',
+    'bhavani',
+    'gobichettipalayam',
+    'sathyamangalam',
+    'anthiyur',
+    'chennimalai',
+    'modakurichi',
+    'kodumudi'
+];
+
+const isServiceableErodeAddress = (address = '') => {
+    const normalizedAddress = String(address).toLowerCase();
+    return SERVICEABLE_ERODE_AREAS.some((area) => normalizedAddress.includes(area));
+};
+
 const Payment = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
@@ -15,8 +32,8 @@ const Payment = () => {
     const [formData, setFormData] = useState({
         name: user?.name || '',
         email: user?.email || '',
-        phone: '',
-        address: ''
+        phone: user?.phone || '',
+        address: user?.address || ''
     });
     const [phoneError, setPhoneError] = useState('');
 
@@ -71,6 +88,11 @@ const Payment = () => {
             return;
         }
 
+        if (!isServiceableErodeAddress(formData.address)) {
+            toast.error('Delivery is available only in Erode district and surrounding areas');
+            return;
+        }
+
         try {
             const orderData = {
                 customerName: formData.name,
@@ -111,6 +133,11 @@ const Payment = () => {
 
         if (!validatePhone(formData.phone)) {
             toast.error('Please enter a valid phone number');
+            return;
+        }
+
+        if (!isServiceableErodeAddress(formData.address)) {
+            toast.error('Delivery is available only in Erode district and surrounding areas');
             return;
         }
 
@@ -190,6 +217,10 @@ const Payment = () => {
                         />
                         {phoneError && <p className="text-sm font-bold text-red-600 mt-2">{phoneError}</p>}
                         <textarea value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} className="w-full px-6 py-4 bg-white/50 border border-white rounded-[1.2rem] focus:outline-none font-bold" rows="3" placeholder="Address" />
+                        <p className="text-xs font-bold text-slate-500">Delivery available only in Erode district and surrounding areas.</p>
+                        {!!formData.address && !isServiceableErodeAddress(formData.address) && (
+                            <p className="text-sm font-bold text-red-600">This address is outside our Erode delivery zone.</p>
+                        )}
                     </div>
 
                     {!canCheckout && (
